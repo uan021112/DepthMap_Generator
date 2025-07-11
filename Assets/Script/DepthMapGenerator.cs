@@ -21,7 +21,14 @@ public class DepthMapGenerator : MonoBehaviour
         if (_idx < _frameNum)
         {
             GetFilePath();
-            RotateModel();
+            if (_isRotateModel)
+            {
+                RotateModel();
+            }
+            else
+            {
+                RotateCamera();
+            }
             PlaceRGBImage();
             SaveDepthMap();
             _idx++;
@@ -32,6 +39,7 @@ public class DepthMapGenerator : MonoBehaviour
     public Camera _cam;
     public GameObject _model;
     public RawImage _rawImage;
+    public bool _isRotateModel = true;
 
     private int _idx;
     private int _frameNum;
@@ -47,16 +55,21 @@ public class DepthMapGenerator : MonoBehaviour
         GetDepthFilePath();
         GetPoseFilePath();
     }
+
+    private void RotateCamera()
+    {
+        Matrix4x4 mPose_c2w = ReadPose(_poseFilePath);
+        Pose pose = TransferMatrixToPose(mPose_c2w);
+        _cam.transform.rotation = pose.rotation;
+        _cam.transform.position = pose.position;
+    }
+
     private void RotateModel()
     {
-        Matrix4x4 poseMatrix = ReadPose(_poseFilePath);
-        Pose pose = TransferMatrixToPose(poseMatrix);
-        _model.transform.position = pose.position;
+        Matrix4x4 mPose_w2c = ReadPose(_poseFilePath).inverse;
+        Pose pose = TransferMatrixToPose(mPose_w2c);
         _model.transform.rotation = pose.rotation;
-
-        _model.transform.RotateAround(_cam.transform.position, _cam.transform.right, 180f);
-        _model.transform.RotateAround(_cam.transform.position, _cam.transform.forward, 90f);
-        _model.transform.Rotate(new Vector3(180, 0, 0));
+        _model.transform.position = pose.position;
     }
 
     private void PlaceRGBImage()
@@ -110,24 +123,8 @@ public class DepthMapGenerator : MonoBehaviour
 
     private Pose TransferMatrixToPose(Matrix4x4 rtM)
     {
-        Matrix4x4 rtM_inverse = rtM.inverse;
-        Vector3 position = GetPosition(rtM_inverse);
-        position.x *= -1;
-
-        Vector3 v = new Vector3();
-        Quaternion q = rtM_inverse.rotation;
-
-        v = q.eulerAngles;
-        //v.x = 180.0f - v.x;
-        //v.z *= 1;
-
-        v.x *= -1;
-        v.y = 180.0f - v.y;
-        v.z = 180.0f + v.z;
-        q = Quaternion.Euler(v);
-
-        Quaternion rotation = q;
-
+        Vector3 position = GetPosition(rtM);
+        Quaternion rotation = rtM.rotation;
         return new Pose(position, rotation);
     }
 

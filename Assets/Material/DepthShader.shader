@@ -6,7 +6,7 @@ Shader "Custom/DepthShader"
 {
 SubShader {
 Tags { "RenderType"="Opaque" }
- 
+Cull Off 
 Pass{
 CGPROGRAM
 #pragma vertex vert
